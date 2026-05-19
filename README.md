@@ -53,16 +53,33 @@ bun run build
 4. **Deploy to OpenCode:**
 ```bash
 mkdir -p ~/.config/opencode/node_modules/opencode-windsurf-auth
-cp -r dist/* ~/.config/opencode/node_modules/opencode-windsurf-auth/
+cp -r dist ~/.config/opencode/node_modules/opencode-windsurf-auth/
 ```
 
 5. **Configure OpenCode** (~/.config/opencode/opencode.json):
 ```json
 {
-  "providers": {
+  "provider": {
     "windsurf": {
-      "type": "proxy",
-      "proxyUrl": "http://127.0.0.1:42100"
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Windsurf",
+      "options": {
+        "baseURL": "http://127.0.0.1:42100/v1"
+      },
+      "models": {
+        "claude-4.5-sonnet": {
+          "name": "Claude 4.5 Sonnet"
+        },
+        "gpt-5.2": {
+          "name": "GPT 5.2"
+        },
+        "swe-1.6": {
+          "name": "SWE 1.6"
+        },
+        "gemini-3.0-pro": {
+          "name": "Gemini 3.0 Pro"
+        }
+      }
     }
   }
 }
@@ -146,7 +163,7 @@ gemini-3.0-flash:high
 └─────────────┘                      └──────────────┘
 ```
 
-1. **Discovery**: Plugin scans for running Windsurf process to extract CSRF token and gRPC port
+1. **Discovery**: Plugin scans for running Windsurf process to extract CSRF token (from `WINDSURF_CSRF_TOKEN` environment variable for Windsurf 1.96+, or `--csrf_token` argument for older versions) and gRPC port
 2. **Translation**: Converts OpenAI REST API calls to Windsurf gRPC messages
 3. **Streaming**: Returns SSE chunks as they arrive from the language server
 4. **Auto-Recovery**: Retries with fresh credentials if Windsurf restarts

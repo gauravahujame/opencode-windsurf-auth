@@ -1,14 +1,14 @@
 /**
  * Windsurf Plugin for OpenCode
- * 
+ *
  * Enables using Windsurf/Codeium models through OpenCode by intercepting
  * requests and routing them through the local Windsurf language server.
- * 
+ *
  * Architecture:
  * 1. Plugin registers a custom fetch handler for windsurf.local domain
  * 2. Requests are transformed to gRPC format and sent to local language server
  * 3. Responses are streamed back in OpenAI-compatible SSE format
- * 
+ *
  * Requirements:
  * - Windsurf must be running (launches language_server_macos process)
  * - User must be logged into Windsurf (provides API key in ~/.codeium/config.json)
@@ -833,3 +833,8 @@ export const WindsurfPlugin = createWindsurfPlugin();
 
 /** Alias for Codeium users */
 export const CodeiumPlugin = createWindsurfPlugin('codeium');
+
+/**
+ * Export the proxy server function for standalone server usage
+ */
+export { ensureWindsurfProxyServer };

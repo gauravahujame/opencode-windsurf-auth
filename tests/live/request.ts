@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 /**
  * Direct gRPC request tester with detailed error analysis
- * 
+ *
  * This sends requests directly to the Windsurf language server
  * and captures the exact error messages to understand the expected format.
- * 
+ *
  * Usage:
  *   bun run tests/live/request.ts
  */
@@ -107,10 +107,10 @@ function buildMetadata(version: string): number[] {
  *   Field 2: header (string)
  *   Field 3: content (string)
  *   Field 4: footer (string)
- * 
+ *
  * ChatMessageSource enum (from extension.js):
  *   0 = UNKNOWN
- *   1 = USER  
+ *   1 = USER
  *   2 = ASSISTANT
  *   3 = SYSTEM
  */
@@ -190,7 +190,7 @@ const TEST_CASES: TestCase[] = [
     name: "Minimal request (just model)",
     build: () => {
       const bytes: number[] = [];
-      bytes.push(...encodeVarintField(4, 4)); // GPT_4O_MINI
+      bytes.push(...encodeVarintField(4, 420)); // SWE_1_6
       return Buffer.from(bytes);
     },
   },
@@ -200,14 +200,14 @@ const TEST_CASES: TestCase[] = [
       const bytes: number[] = [];
       const msg = buildFormattedChatMessage(1, "Hello");
       bytes.push(...encodeMessage(2, msg));
-      bytes.push(...encodeVarintField(4, 4));
+      bytes.push(...encodeVarintField(4, 420)); // SWE_1_6
       return Buffer.from(bytes);
     },
   },
   {
     name: "With metadata + message",
     build: (version) => {
-      return buildRequest(version, [{ role: 1, content: "Say hi" }], 4);
+      return buildRequest(version, [{ role: 1, content: "Say hi" }], 420); // SWE_1_6
     },
   },
   {
@@ -216,7 +216,7 @@ const TEST_CASES: TestCase[] = [
       return buildRequest(
         version,
         [{ role: 1, content: "What is 2+2?" }],
-        4,
+        420, // SWE_1_6
         "You are a helpful assistant."
       );
     },

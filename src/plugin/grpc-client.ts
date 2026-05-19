@@ -1,9 +1,9 @@
 /**
  * gRPC Client for Windsurf Language Server
- * 
+ *
  * Implements HTTP/2-based gRPC communication with the local Windsurf language server.
  * Uses manual protobuf encoding (no external protobuf library needed).
- * 
+ *
  * Two code paths:
  *   - Legacy (RawGetChatMessage): for older models with enum < 280 and no modelUid
  *   - Cascade flow (StartCascade → SendUserCascadeMessage → poll): for all premium models
@@ -25,7 +25,7 @@ import { getMetadataFields } from './discovery.js';
 // Bun/Node.js Runtime Detection
 // ============================================================================
 
-const IS_BUN = typeof (process as any).isBun !== 'undefined' || 
+const IS_BUN = typeof (process as any).isBun !== 'undefined' ||
                (process.versions as any).bun !== undefined;
 
 // ============================================================================
@@ -135,7 +135,7 @@ function encodeChatMessageIntent(text: string): number[] {
 
 /**
  * Encode a ChatMessage for the RawGetChatMessageRequest
- * 
+ *
  * ChatMessage structure (from reverse engineering):
  * Field 1: message_id (string, required)
  * Field 2: source (enum: 1=USER, 2=SYSTEM, 3=ASSISTANT)
@@ -176,7 +176,7 @@ function encodeChatMessage(content: string, source: number, conversationId: stri
 /**
  * Build the metadata message for Cascade requests
  * Uses hardcoded field numbers that work with StartCascade/SendUserCascadeMessage
- * 
+ *
  * Discovered field mapping for Cascade:
  *   api_key: 3, ide_name: 1, ide_version: 7, extension_version: 2, session_id: 10, locale: 4
  */
@@ -231,7 +231,7 @@ function roleToSource(role: string): number {
 
 /**
  * Build the complete chat request buffer using RawGetChatMessageRequest format
- * 
+ *
  * RawGetChatMessageRequest structure:
  * Field 1: metadata (Metadata message)
  * Field 2: chat_messages (repeated ChatMessage)
@@ -299,7 +299,7 @@ function buildChatRequest(
 
 /**
  * Build StartCascadeRequest
- * 
+ *
  * StartCascadeRequest:
  *   Field 1: metadata (Metadata)
  *   Field 4: source (CortexTrajectorySource enum, 0=unspecified)
@@ -320,45 +320,45 @@ function buildStartCascadeRequest(apiKey: string, version: string): Buffer {
 
 /**
  * Build SendUserCascadeMessageRequest
- * 
+ *
  * SendUserCascadeMessageRequest:
  *   Field 1: cascade_id (string)
  *   Field 2: items (repeated TextOrScopeItem)
  *   Field 3: metadata (Metadata)
  *   Field 5: cascade_config (CascadeConfig)
- * 
+ *
  * TextOrScopeItem:
  *   Field 1: text (string)
- * 
+ *
  * CascadeConfig:
  *   Field 1: planner_config (CascadePlannerConfig)
  *   Field 7: brain_config (BrainConfig)
- * 
+ *
  * CascadePlannerConfig:
  *   Field 2: conversational (CascadeConversationalPlannerConfig)
  *   Field 13: tool_config (CascadeToolConfig)
  *   Field 35: requested_model_uid (string) — for string-UID models
  *   Field 15: requested_model_deprecated (ModelOrAlias) — for enum models
- * 
+ *
  * CascadeConversationalPlannerConfig:
  *   Field 4: planner_mode (ConversationalPlannerMode, 1=CONVERSATIONAL)
- * 
+ *
  * CascadeToolConfig:
  *   Field 8: run_command (RunCommandToolConfig)
- * 
+ *
  * RunCommandToolConfig:
  *   Field 3: auto_command_config (AutoCommandConfig)
- * 
+ *
  * AutoCommandConfig:
  *   Field 6: auto_execution_policy (CascadeCommandsAutoExecution, 3=ALWAYS)
- * 
+ *
  * BrainConfig:
  *   Field 1: enabled (bool)
  *   Field 6: update_strategy (BrainUpdateStrategy)
- * 
+ *
  * BrainUpdateStrategy:
  *   Field 6: dynamic_update (DynamicBrainUpdateConfig, empty message)
- * 
+ *
  * ModelOrAlias:
  *   Field 1: model (Model enum)
  *   Field 3: model_uid (string)
@@ -452,7 +452,7 @@ function buildSendCascadeMessageRequest(
 
 /**
  * Build GetCascadeTrajectoryStepsRequest
- * 
+ *
  * Field 1: cascade_id (string)
  * Field 2: step_offset (uint32)
  */
@@ -467,7 +467,7 @@ function buildGetTrajectoryStepsRequest(cascadeId: string, stepOffset: number = 
 
 /**
  * Build GetCascadeTrajectoryRequest (for status polling)
- * 
+ *
  * Field 1: cascade_id (string)
  */
 function buildGetTrajectoryRequest(cascadeId: string): Buffer {
@@ -574,7 +574,7 @@ function parseProtobufField(buffer: Buffer, offset: number): {
 
 /**
  * Extract text from RawChatMessage protobuf
- * 
+ *
  * RawChatMessage structure:
  * Field 1: message_id (string)
  * Field 2: source (enum)
@@ -604,7 +604,7 @@ function extractTextFromRawChatMessage(buffer: Buffer): string {
 
 /**
  * Extract text from RawGetChatMessageResponse protobuf
- * 
+ *
  * RawGetChatMessageResponse structure:
  * Field 1: delta_message (RawChatMessage)
  */
@@ -629,7 +629,7 @@ function extractTextFromResponse(buffer: Buffer): string {
 
 /**
  * Extract readable text from a gRPC response chunk
- * 
+ *
  * The response is gRPC-framed: 1 byte compression + 4 bytes length + protobuf payload
  * We parse the protobuf to extract the text field from RawChatMessage.
  */
@@ -686,7 +686,7 @@ function extractTextFromChunk(chunk: Buffer): string {
 
 /**
  * Parse StartCascadeResponse to extract cascade_id
- * 
+ *
  * StartCascadeResponse:
  *   Field 1: cascade_id (string)
  */
@@ -705,7 +705,7 @@ function parseStartCascadeResponse(buffer: Buffer): string {
 
 /**
  * Parse GetCascadeTrajectoryResponse to extract status
- * 
+ *
  * GetCascadeTrajectoryResponse:
  *   Field 1: trajectory (CortexTrajectory)
  *   Field 2: status (CascadeRunStatus enum)
@@ -727,10 +727,10 @@ function parseTrajectoryStatus(buffer: Buffer): number {
 
 /**
  * Parse GetCascadeTrajectoryStepsResponse to extract planner response text
- * 
+ *
  * GetCascadeTrajectoryStepsResponse:
  *   Field 1: steps (repeated CortexTrajectoryStep)
- * 
+ *
  * CortexTrajectoryStep:
  *   Field 1: type (CortexStepType enum)
  *     CORTEX_STEP_TYPE_PLANNER_RESPONSE = 15
@@ -738,7 +738,7 @@ function parseTrajectoryStatus(buffer: Buffer): number {
  *     CORTEX_STEP_STATUS_DONE = 3
  *     CORTEX_STEP_STATUS_GENERATING = 8
  *   Field 20: planner_response (CortexStepPlannerResponse)
- * 
+ *
  * CortexStepPlannerResponse:
  *   Field 1: response (string) ← the text
  *   Field 3: thinking (string)
@@ -825,7 +825,7 @@ function grpcUnaryCall(
   if (IS_BUN) {
     return grpcUnaryCallNode(port, csrfToken, grpcPath, body, retryCount);
   }
-  
+
   // Use native http2 on Node.js
   return new Promise((resolve, reject) => {
     const client = http2.connect(`http://localhost:${port}`);
@@ -853,13 +853,19 @@ function grpcUnaryCall(
       ));
     });
 
-    const req = client.request({
+    const headers: Record<string, string> = {
       ':method': 'POST',
       ':path': grpcPath,
       'content-type': 'application/grpc',
       'te': 'trailers',
-      'x-codeium-csrf-token': csrfToken,
-    });
+    };
+
+    // Only include CSRF token if it exists (Windsurf 2.3.9+ may not use CSRF tokens)
+    if (csrfToken) {
+      headers['x-codeium-csrf-token'] = csrfToken;
+    }
+
+    const req = client.request(headers);
 
     req.on('data', (chunk: Buffer) => {
       chunks.push(chunk);
@@ -1204,7 +1210,7 @@ async function getTrajectorySteps(
 
 /**
  * Stream chat via the Cascade flow (for premium models)
- * 
+ *
  * Flow:
  * 1. StartCascade → get cascade_id
  * 2. SendUserCascadeMessage (with model config)
@@ -1293,7 +1299,7 @@ async function* streamChatCascade(
 
 /**
  * Determine if a model should use the Cascade flow
- * 
+ *
  /**
  * Determines whether to use the Cascade flow for a given model.
  * Only use Cascade when we have an explicit string UID — models without UIDs
@@ -1309,7 +1315,7 @@ function shouldUseCascade(_modelEnum: number, modelUid?: string): boolean {
 
 /**
  * Stream chat completion using Promise-based API
- * 
+ *
  * @param credentials - Windsurf credentials (csrf, port, apiKey, version)
  * @param options - Chat options including model, messages, and callbacks
  * @returns Promise that resolves to the full response text
@@ -1372,7 +1378,7 @@ export async function streamChat(
 
   return new Promise((resolve, reject) => {
     let retryAttempted = false;
-    
+
     function connectWithCredentials(creds: WindsurfCredentials) {
       const client = http2.connect(`http://localhost:${creds.port}`);
       const chunks: string[] = [];
@@ -1402,13 +1408,19 @@ export async function streamChat(
       });
 
       client.on('connect', () => {
-        const req = client.request({
+        const headers: Record<string, string> = {
           ':method': 'POST',
           ':path': '/exa.language_server_pb.LanguageServerService/RawGetChatMessage',
           'content-type': 'application/grpc',
           'te': 'trailers',
-          'x-codeium-csrf-token': creds.csrfToken,
-        });
+        };
+
+        // Only include CSRF token if it exists (Windsurf 2.3.9+ may not use CSRF tokens)
+        if (creds.csrfToken) {
+          headers['x-codeium-csrf-token'] = creds.csrfToken;
+        }
+
+        const req = client.request(headers);
 
         req.on('data', (chunk: Buffer) => {
           const text = extractTextFromChunk(chunk);
@@ -1452,16 +1464,16 @@ export async function streamChat(
         req.end();
       });
     }
-    
+
     connectWithCredentials(credentials);
   });
 }
 
 /**
  * Stream chat completion using async generator
- * 
+ *
  * Yields text chunks as they arrive, for use with SSE streaming.
- * 
+ *
  * @param credentials - Windsurf credentials
  * @param options - Chat options (model and messages)
  * @yields Text chunks as they arrive
@@ -1524,13 +1536,19 @@ export async function* streamChatGenerator(
       resolveWait?.();
     });
 
-    const req = client.request({
+    const headers: Record<string, string> = {
       ':method': 'POST',
       ':path': '/exa.language_server_pb.LanguageServerService/RawGetChatMessage',
       'content-type': 'application/grpc',
       'te': 'trailers',
-      'x-codeium-csrf-token': creds.csrfToken,
-    });
+    };
+
+    // Only include CSRF token if it exists (Windsurf 2.3.9+ may not use CSRF tokens)
+    if (creds.csrfToken) {
+      headers['x-codeium-csrf-token'] = creds.csrfToken;
+    }
+
+    const req = client.request(headers);
 
     req.on('data', (chunk: Buffer) => {
       const text = extractTextFromChunk(chunk);

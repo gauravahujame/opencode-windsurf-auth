@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Node.js gRPC wrapper for Bun HTTP/2 compatibility
- * 
+ *
  * Unary mode (default):
  *   Usage: node grpc-wrapper.mjs <port> <csrf> <path> <body_file>
  *   body_file: path to a file containing the raw gRPC body bytes
@@ -24,10 +24,13 @@ const args = process.argv.slice(2);
 const streamMode = args.includes('--stream');
 const [port, csrfToken, path, bodyFile] = args.filter(a => a !== '--stream');
 
-if (!port || !csrfToken || !path || !bodyFile) {
+if (!port || !path || !bodyFile) {
   console.error('Usage: node grpc-wrapper.mjs <port> <csrf> <path> <body_file> [--stream]');
   process.exit(1);
 }
+
+// Allow empty or 'none' for CSRF token (Windsurf 2.3.9+ may not use CSRF)
+const csrfHeaderValue = csrfToken && csrfToken !== 'none' ? csrfToken : '';
 
 const body = fs.existsSync(bodyFile) ? fs.readFileSync(bodyFile) : Buffer.alloc(0);
 // Clean up temp file immediately after reading
@@ -51,13 +54,19 @@ client.on('error', (err) => {
 });
 
 client.on('connect', () => {
-  const req = client.request({
+  const headers = {
     ':method': 'POST',
     ':path': path,
     'content-type': 'application/grpc',
     'te': 'trailers',
-    'x-codeium-csrf-token': csrfToken,
-  });
+  };
+
+  // Only include CSRF token if it exists (Windsurf 2.3.9+ may not use CSRF)
+  if (csrfHeaderValue) {
+    headers['x-codeium-csrf-token'] = csrfHeaderValue;
+  }
+
+  const req = client.request(headers);
 
   req.on('data', (chunk) => {
     if (streamMode) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Test all models in the enum to verify they work with Windsurf API
- * 
+ *
  * Tests each canonical model with a simple request to verify:
  * 1. The model enum is accepted by the API
  * 2. The model returns a valid response
@@ -30,7 +30,7 @@ async function testModel(
 ): Promise<TestResult> {
   const enumValue = modelNameToEnum(model);
   const start = Date.now();
-  
+
   const messages: ChatMessage[] = [
     { role: 'user', content: TEST_PROMPT }
   ];
@@ -38,13 +38,13 @@ async function testModel(
   try {
     const response = await Promise.race([
       streamChat(credentials, { model, messages }),
-      new Promise<never>((_, reject) => 
+      new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Timeout')), timeoutMs)
       )
     ]);
 
     const duration = Date.now() - start;
-    
+
     return {
       model,
       enumValue,
@@ -55,7 +55,7 @@ async function testModel(
   } catch (error) {
     const duration = Date.now() - start;
     const errorMessage = error instanceof Error ? error.message : String(error);
-    
+
     return {
       model,
       enumValue,
@@ -90,8 +90,12 @@ async function main() {
   const timeoutMs = parseInt(args.find(a => a.startsWith('--timeout='))?.split('=')[1] || '30000');
 
   let modelsToTest = allModels;
-  
-  if (filterPattern) {
+
+  // Default to SWE-1.6 only unless filter is explicitly provided
+  if (!filterPattern) {
+    modelsToTest = modelsToTest.filter(m => m === 'swe-1.6');
+    console.log(`Defaulting to SWE-1.6 only (use --filter to test other models)\n`);
+  } else {
     const regex = new RegExp(filterPattern, 'i');
     modelsToTest = modelsToTest.filter(m => regex.test(m));
     console.log(`Filtered to ${modelsToTest.length} models matching "${filterPattern}"\n`);
@@ -109,24 +113,24 @@ async function main() {
   // Test models (sequentially by default to avoid rate limits)
   if (parallelCount > 1) {
     console.log(`Running ${parallelCount} tests in parallel...\n`);
-    
+
     for (let i = 0; i < modelsToTest.length; i += parallelCount) {
       const batch = modelsToTest.slice(i, i + parallelCount);
       const batchResults = await Promise.all(
         batch.map(model => testModel(credentials, model, timeoutMs))
       );
-      
+
       for (const result of batchResults) {
         results.push(result);
         printResult(result);
-        
+
         if (result.status === 'pass') {
           passed.push(result.model);
         } else {
           failed.push(result.model);
         }
       }
-      
+
       // Small delay between batches to avoid rate limiting
       if (i + parallelCount < modelsToTest.length) {
         await new Promise(r => setTimeout(r, 500));
@@ -137,13 +141,13 @@ async function main() {
       const result = await testModel(credentials, model, timeoutMs);
       results.push(result);
       printResult(result);
-      
+
       if (result.status === 'pass') {
         passed.push(result.model);
       } else {
         failed.push(result.model);
       }
-      
+
       // Small delay between requests
       await new Promise(r => setTimeout(r, 200));
     }
@@ -156,7 +160,7 @@ async function main() {
   console.log(`Total:  ${results.length}`);
   console.log(`Passed: ${passed.length} (${((passed.length / results.length) * 100).toFixed(1)}%)`);
   console.log(`Failed: ${failed.length}`);
-  
+
   if (failed.length > 0) {
     console.log('\nFailed models:');
     for (const model of failed) {
@@ -192,12 +196,12 @@ function printResult(result: TestResult) {
   const statusIcon = result.status === 'pass' ? '✓' : '✗';
   const statusColor = result.status === 'pass' ? '\x1b[32m' : '\x1b[31m';
   const reset = '\x1b[0m';
-  
+
   const duration = `${(result.duration / 1000).toFixed(1)}s`;
-  const info = result.status === 'pass' 
+  const info = result.status === 'pass'
     ? `${result.responseLength} chars`
     : result.error?.slice(0, 50);
-  
+
   console.log(
     `${statusColor}${statusIcon}${reset} ` +
     `${result.model.padEnd(30)} ` +

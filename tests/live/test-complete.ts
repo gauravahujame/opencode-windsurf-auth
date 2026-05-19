@@ -32,9 +32,9 @@ function getCredentials(): Credentials | null {
       `sqlite3 ~/Library/Application\\ Support/Windsurf/User/globalStorage/state.vscdb "SELECT value FROM ItemTable WHERE key = 'windsurfAuthStatus';" 2>/dev/null`,
       { encoding: "utf8" }
     ).trim();
-    
+
     const parsed = JSON.parse(apiKey);
-    
+
     return {
       csrfToken: csrfMatch[1],
       port: parseInt(portMatch[1], 10) + 2,
@@ -89,7 +89,7 @@ function encodeTimestamp(): number[] {
   const now = Date.now();
   const seconds = Math.floor(now / 1000);
   const nanos = (now % 1000) * 1_000_000;
-  
+
   const bytes: number[] = [];
   bytes.push(...encodeVarintField(1, seconds));
   if (nanos > 0) {
@@ -125,24 +125,24 @@ function encodeChatMessageIntent(text: string): number[] {
  */
 function encodeChatMessage(text: string, messageId: string, conversationId: string): number[] {
   const bytes: number[] = [];
-  
+
   // Field 1: message_id (required)
   bytes.push(...encodeString(1, messageId));
-  
+
   // Field 2: source = USER (1)
   bytes.push(...encodeVarintField(2, 1));
-  
+
   // Field 3: timestamp (required)
   const timestamp = encodeTimestamp();
   bytes.push(...encodeMessage(3, timestamp));
-  
+
   // Field 4: conversation_id (required)
   bytes.push(...encodeString(4, conversationId));
-  
+
   // Field 5: intent (ChatMessageIntent)
   const intent = encodeChatMessageIntent(text);
   bytes.push(...encodeMessage(5, intent));
-  
+
   return bytes;
 }
 
@@ -201,7 +201,7 @@ async function testRequest(
 
     req.on("data", (chunk: Buffer) => {
       responseData = Buffer.concat([responseData, chunk]);
-      
+
       // Try to extract text from chunk
       const text = chunk.toString("utf8").replace(/[^\x20-\x7e\n\r]/g, "").trim();
       if (text.length > 0) {
@@ -223,7 +223,7 @@ async function testRequest(
     req.on("end", () => {
       if (responseData.length > 5) {
         console.log(`\nTotal response: ${responseData.length} bytes`);
-        
+
         // Extract readable text
         const readable = responseData.toString("utf8").replace(/[^\x20-\x7e\n\r]/g, " ").replace(/\s+/g, " ").trim();
         if (readable.length > 10) {
@@ -276,12 +276,12 @@ async function main() {
   // Build the complete request
   const messageId = generateUUID();
   console.log(`Message ID: ${messageId}`);
-  
+
   const metadata = encodeMetadata(creds.apiKey, creds.version);
   const conversationId = generateUUID();
   const chatMessage = encodeChatMessage("Say hello in exactly 5 words.", messageId, conversationId);
   console.log(`Conversation ID: ${conversationId}`);
-  
+
   /**
    * RawGetChatMessageRequest:
    * Field 1: metadata (Metadata)
@@ -290,37 +290,37 @@ async function main() {
    * Field 4: chat_model (enum Model)
    * Field 5: chat_model_name (string)
    */
-  
-  // Test with gpt-4o (109) - should be widely available
+
+  // Test with SWE-1.6 (420)
   const payload = Buffer.from([
     ...encodeMessage(1, metadata),            // Field 1: metadata
     ...encodeMessage(2, chatMessage),         // Field 2: chat_messages[0]
-    ...encodeVarintField(4, 109),             // Field 4: chat_model = 109 (GPT_4O_2024_08_06)
+    ...encodeVarintField(4, 420),             // Field 4: chat_model = 420 (SWE_1_6)
   ]);
 
-  await testRequest(creds, "GPT-4o (109)", payload);
+  await testRequest(creds, "SWE-1.6 (420)", payload);
 
-  console.log("\n\n=== Testing with GPT-4.1 ===\n");
-  
-  // Try with GPT-4.1 (259)
+  console.log("\n\n=== Testing with SWE-1.6 (second request) ===\n");
+
+  // Try with SWE-1.6 again
   const payload2 = Buffer.from([
     ...encodeMessage(1, metadata),
     ...encodeMessage(2, encodeChatMessage("Say hello in exactly 3 words.", generateUUID(), generateUUID())),
-    ...encodeVarintField(4, 259),             // GPT_4_1_2025_04_14
+    ...encodeVarintField(4, 420),             // SWE_1_6
   ]);
-  
-  await testRequest(creds, "GPT-4.1 (259)", payload2);
-  
-  console.log("\n\n=== Testing with Claude 3.5 Sonnet ===\n");
-  
-  // Try with Claude 3.5 Sonnet (166)
+
+  await testRequest(creds, "SWE-1.6 (420)", payload2);
+
+  console.log("\n\n=== Testing with SWE-1.6 (third request) ===\n");
+
+  // Try with SWE-1.6 again
   const payload3 = Buffer.from([
     ...encodeMessage(1, metadata),
     ...encodeMessage(2, encodeChatMessage("Reply with just 'Hello!'", generateUUID(), generateUUID())),
-    ...encodeVarintField(4, 166),             // CLAUDE_3_5_SONNET_20241022
+    ...encodeVarintField(4, 420),             // SWE_1_6
   ]);
-  
-  await testRequest(creds, "Claude 3.5 Sonnet (166)", payload3);
+
+  await testRequest(creds, "SWE-1.6 (420)", payload3);
 
   console.log("\n\nDone!");
 }

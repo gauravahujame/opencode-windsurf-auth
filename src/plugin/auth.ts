@@ -1,6 +1,6 @@
 /**
  * Windsurf Credential Discovery Module
- * 
+ *
  * Automatically discovers credentials from the running Windsurf language server:
  * - CSRF token from process arguments
  * - Port from process arguments (extension_server_port + 2)
@@ -87,7 +87,7 @@ function getLanguageServerPattern(): string {
  */
 function getLanguageServerProcess(): string | null {
   const pattern = getLanguageServerPattern();
-  
+
   try {
     if (process.platform === 'win32') {
       // Windows: use WMIC
@@ -99,7 +99,7 @@ function getLanguageServerProcess(): string | null {
     } else {
       // Unix-like: use ps
       const output = execSync(
-        `ps aux | grep ${pattern}`,
+        `ps aux | grep "[w]indsurf" | grep "${pattern}"`,
         { encoding: 'utf8', timeout: 5000 }
       );
       return output;
@@ -110,25 +110,72 @@ function getLanguageServerProcess(): string | null {
 }
 
 /**
+ * Extract PID from process info string
+ */
+function extractPid(processInfo: string): string | null {
+  if (process.platform === 'win32') {
+    const match = processInfo.match(/ProcessId=(\d+)/);
+    return match ? match[1] : null;
+  } else {
+    // Unix: ps aux output format (USER PID ...)
+    const match = processInfo.match(/^\s*\S+\s+(\d+)/);
+    return match ? match[1] : null;
+  }
+}
+
+/**
  * Extract CSRF token from running Windsurf language server process
+ * In Windsurf 1.96+, CSRF token is passed via WINDSURF_CSRF_TOKEN environment variable
+ * Falls back to legacy --csrf_token argument for older versions
  */
 export function getCSRFToken(): string {
   const processInfo = getLanguageServerProcess();
-  
+
   if (!processInfo) {
     throw new WindsurfError(
       'Windsurf language server not found. Is Windsurf running?',
       WindsurfErrorCode.NOT_RUNNING
     );
   }
-  
-  const match = processInfo.match(/--csrf_token\s+([a-f0-9-]+)/);
-  if (match?.[1]) {
-    return match[1];
+
+  // 1. Try Legacy format (< 1.96): token in process arguments
+  const argMatch = processInfo.match(/--csrf_token\s+([a-f0-9-]+)/);
+  if (argMatch?.[1]) {
+    return argMatch[1];
   }
-  
+
+  // 2. Try New format (>= 1.96): token in environment variables
+  const pid = extractPid(processInfo);
+  if (pid) {
+    try {
+      if (process.platform === 'linux') {
+        const envData = fs.readFileSync(`/proc/${pid}/environ`, 'utf8');
+        const envParts = envData.split('\0');
+        for (const part of envParts) {
+          if (part.startsWith('WINDSURF_CSRF_TOKEN=')) {
+            return part.substring('WINDSURF_CSRF_TOKEN='.length);
+          }
+        }
+      } else if (process.platform === 'darwin') {
+        const envOutput = execSync(`ps ewww -p ${pid}`, { encoding: 'utf8', timeout: 5000 });
+        const macEnvMatch = envOutput.match(/WINDSURF_CSRF_TOKEN=([a-f0-9-]+)/);
+        if (macEnvMatch?.[1]) {
+          return macEnvMatch[1];
+        }
+      } else if (process.platform === 'win32') {
+        const envOutput = execSync(`powershell -Command "(Get-Process -Id ${pid}).StartInfo.EnvironmentVariables['WINDSURF_CSRF_TOKEN']"`, { encoding: 'utf8', timeout: 5000 });
+        const token = envOutput.trim();
+        if (token) {
+          return token;
+        }
+      }
+    } catch (e) {
+      // Fall through on error
+    }
+  }
+
   throw new WindsurfError(
-    'CSRF token not found in Windsurf process. Is Windsurf running?',
+    'CSRF token not found in Windsurf process or environment. Is Windsurf running?',
     WindsurfErrorCode.CSRF_MISSING
   );
 }
@@ -139,22 +186,22 @@ export function getCSRFToken(): string {
  */
 export function getPort(): number {
   const processInfo = getLanguageServerProcess();
-  
+
   if (!processInfo) {
     throw new WindsurfError(
       'Windsurf language server not found. Is Windsurf running?',
       WindsurfErrorCode.NOT_RUNNING
     );
   }
-  
+
   // Extract PID from ps output (second column)
   const pidMatch = processInfo.match(/^\s*\S+\s+(\d+)/);
   const pid = pidMatch ? pidMatch[1] : null;
-  
+
   // Get extension_server_port as a reference point
   const portMatch = processInfo.match(/--extension_server_port\s+(\d+)/);
   const extPort = portMatch ? parseInt(portMatch[1], 10) : null;
-  
+
   // Use lsof to find actual listening ports for this specific PID
   if (process.platform === 'darwin' && pid) {
     try {
@@ -162,7 +209,7 @@ export function getPort(): number {
         `lsof -a -p ${pid} -i -P -n 2>/dev/null | grep LISTEN`,
         { encoding: 'utf8', timeout: 15000 }
       );
-      
+
       // lsof output: COMMAND PID USER FD TYPE ... NAME (e.g., "3u  IPv4 ... TCP 127.0.0.1:42863 (LISTEN)")
       // Parse fd (column 4, e.g., "3u") and port together, sort by fd ascending (lower fd = gRPC server)
       const portFdPairsMac: { port: number; fd: number }[] = [];
@@ -195,7 +242,7 @@ export function getPort(): number {
         `lsof -p ${pid} -i -P -n 2>/dev/null | grep LISTEN`,
         { encoding: 'utf8', timeout: 15000 }
       );
-      
+
       // lsof output: COMMAND PID USER FD TYPE ... NAME (e.g., "3u  IPv4 ... TCP 127.0.0.1:42863 (LISTEN)")
       // Parse fd and port together, sort by fd ascending (lower fd = gRPC server opened first)
       const portFdPairsLsof: { port: number; fd: number }[] = [];
@@ -228,7 +275,7 @@ export function getPort(): number {
         `ss -tlnp 2>/dev/null | grep "pid=${pid}"`,
         { encoding: 'utf8', timeout: 15000 }
       );
-      
+
       // ss output format: LISTEN 0 4096 127.0.0.1:PORT 0.0.0.0:*  users:(("proc",pid=X,fd=Y))
       // CRITICAL: ss output order is NOT guaranteed to be fd order.
       // We must parse fd explicitly and sort ascending — lower fd = socket opened first = main gRPC server.
@@ -259,12 +306,12 @@ export function getPort(): number {
       // Fall through to offset-based approach
     }
   }
-  
+
   // Fallback: try common offsets (+3, +2, +4)
   if (extPort) {
     return extPort + 3;
   }
-  
+
   throw new WindsurfError(
     'Windsurf language server port not found. Is Windsurf running?',
     WindsurfErrorCode.NOT_RUNNING
@@ -273,23 +320,23 @@ export function getPort(): number {
 
 /**
  * Read API key from VSCode state database (windsurfAuthStatus)
- * 
+ *
  * The API key is stored in the SQLite database at:
  * ~/Library/Application Support/Windsurf/User/globalStorage/state.vscdb
- * 
+ *
  * It's stored in the 'windsurfAuthStatus' key as JSON containing apiKey.
  */
 export function getApiKey(): string {
   const platform = process.platform as keyof typeof VSCODE_STATE_PATHS;
   const statePath = VSCODE_STATE_PATHS[platform];
-  
+
   if (!statePath) {
     throw new WindsurfError(
       `Unsupported platform: ${process.platform}`,
       WindsurfErrorCode.API_KEY_MISSING
     );
   }
-  
+
   // Try to get API key from VSCode state database
   if (fs.existsSync(statePath)) {
     try {
@@ -297,7 +344,7 @@ export function getApiKey(): string {
         `sqlite3 "${statePath}" "SELECT value FROM ItemTable WHERE key = 'windsurfAuthStatus';"`,
         { encoding: 'utf8', timeout: 5000 }
       ).trim();
-      
+
       if (result) {
         const parsed = JSON.parse(result);
         if (parsed.apiKey) {
@@ -308,7 +355,7 @@ export function getApiKey(): string {
       // Fall through to legacy config
     }
   }
-  
+
   // Try legacy config file
   if (fs.existsSync(LEGACY_CONFIG_PATH)) {
     try {
@@ -321,7 +368,7 @@ export function getApiKey(): string {
       // Fall through
     }
   }
-  
+
   throw new WindsurfError(
     'API key not found. Please login to Windsurf first.',
     WindsurfErrorCode.API_KEY_MISSING
@@ -333,7 +380,7 @@ export function getApiKey(): string {
  */
 export function getWindsurfVersion(): string {
   const processInfo = getLanguageServerProcess();
-  
+
   if (processInfo) {
     const match = processInfo.match(/--windsurf_version\s+([^\s]+)/);
     if (match) {
@@ -342,7 +389,7 @@ export function getWindsurfVersion(): string {
       return version;
     }
   }
-  
+
   // Default fallback version
   return '1.13.104';
 }
