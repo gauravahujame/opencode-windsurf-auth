@@ -1,15 +1,15 @@
 /**
  * Standalone Windsurf Proxy Server
- * 
+ *
  * This file starts the Windsurf proxy server as a standalone process.
  * It's used by the install.sh script to run the server in the background.
- * 
+ *
  * Usage:
  *   bun run dist/server.js
  */
 
 import { ensureWindsurfProxyServer } from './plugin.js';
-import { isWindsurfRunning } from './plugin/auth.js';
+import { isWindsurfRunning } from '@windsurf/sdk';
 
 async function main() {
   console.log('[INFO] Starting Windsurf Proxy Server...');

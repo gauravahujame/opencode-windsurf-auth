@@ -11,20 +11,14 @@
  *
  * Requirements:
  * - Windsurf must be running (launches language_server_macos process)
- * - User must be logged into Windsurf (provides API key in ~/.codeium/config.json)
  */
 
 import * as crypto from 'crypto';
 import type { PluginInput, Hooks } from '@opencode-ai/plugin';
-import { getCredentials, isWindsurfRunning, WindsurfCredentials } from './plugin/auth.js';
-import { streamChatGenerator, ChatMessage } from './plugin/grpc-client.js';
-import {
-  getDefaultModel,
-  getCanonicalModels,
-  getModelVariants,
-  resolveModel,
-} from './plugin/models.js';
-import { PLUGIN_ID } from './constants.js';
+import { getCredentials, isWindsurfRunning, type WindsurfCredentials } from '@windsurf/sdk';
+import { streamChatGenerator, type ChatMessage } from './plugin/grpc-client.js';
+import { resolveModel, getDefaultModel, getCanonicalModels, getModelVariants } from '@windsurf/sdk';
+import { PLUGIN_ID } from '@windsurf/sdk';
 
 // ============================================================================
 // Types

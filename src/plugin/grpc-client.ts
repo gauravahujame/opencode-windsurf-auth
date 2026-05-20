@@ -16,10 +16,19 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { fileURLToPath } from 'url';
-import { ChatMessageSource } from './types.js';
-import { resolveModel } from './models.js';
-import { WindsurfCredentials, WindsurfError, WindsurfErrorCode, getCredentials } from './auth.js';
-import { getMetadataFields } from './discovery.js';
+import { ChatMessageSource } from '@windsurf/sdk';
+import { resolveModel } from '@windsurf/sdk';
+import { WindsurfCredentials, WindsurfError, WindsurfErrorCode, getCredentials } from '@windsurf/sdk';
+import { getMetadataFields } from '@windsurf/sdk';
+import {
+  encodeString,
+  encodeMessage,
+  encodeVarintField,
+  generateUUID,
+  encodeTimestamp,
+  encodeChatMessageIntent,
+  grpcFrame,
+} from '@windsurf/sdk';
 
 // ============================================================================
 // Bun/Node.js Runtime Detection
@@ -47,91 +56,9 @@ export interface StreamChatOptions {
 }
 
 // ============================================================================
-// Protobuf Encoding Helpers
-// ============================================================================
-
-/**
- * Encode a number as a varint (variable-length integer)
- */
-function encodeVarint(value: number | bigint): number[] {
-  const bytes: number[] = [];
-  let v = BigInt(value);
-  while (v > 127n) {
-    bytes.push(Number(v & 0x7fn) | 0x80);
-    v >>= 7n;
-  }
-  bytes.push(Number(v));
-  return bytes;
-}
-
-/**
- * Encode a string field (wire type 2: length-delimited)
- */
-function encodeString(fieldNum: number, str: string): number[] {
-  const strBytes = Buffer.from(str, 'utf8');
-  return [...encodeVarint((fieldNum << 3) | 2), ...encodeVarint(strBytes.length), ...strBytes];
-}
-
-/**
- * Encode a nested message field (wire type 2: length-delimited)
- */
-function encodeMessage(fieldNum: number, data: number[]): number[] {
-  return [...encodeVarint((fieldNum << 3) | 2), ...encodeVarint(data.length), ...data];
-}
-
-/**
- * Encode a varint field (wire type 0)
- */
-function encodeVarintField(fieldNum: number, value: number | bigint): number[] {
-  return [...encodeVarint((fieldNum << 3) | 0), ...encodeVarint(value)];
-}
-
-// ============================================================================
 // Request Building
 // ============================================================================
-
-/**
- * Generate a UUID for message and conversation IDs
- */
-function generateUUID(): string {
-  return crypto.randomUUID();
-}
-
-/**
- * Encode a google.protobuf.Timestamp
- * Field 1: seconds (int64)
- * Field 2: nanos (int32)
- */
-function encodeTimestamp(): number[] {
-  const now = Date.now();
-  const seconds = Math.floor(now / 1000);
-  const nanos = (now % 1000) * 1_000_000;
-
-  const bytes: number[] = [];
-  bytes.push(...encodeVarintField(1, seconds));
-  if (nanos > 0) {
-    bytes.push(...encodeVarintField(2, nanos));
-  }
-  return bytes;
-}
-
-/**
- * Encode IntentGeneric message
- * Field 1: text (string)
- */
-function encodeIntentGeneric(text: string): number[] {
-  return encodeString(1, text);
-}
-
-/**
- * Encode ChatMessageIntent message
- * Field 1: generic (IntentGeneric, oneof)
- * Field 12: num_tokens (int32)
- */
-function encodeChatMessageIntent(text: string): number[] {
-  const generic = encodeIntentGeneric(text);
-  return encodeMessage(1, generic);
-}
+// Note: Protobuf encoding helpers (encodeVarint, encodeString, encodeMessage, encodeVarintField, generateUUID, encodeTimestamp, encodeIntentGeneric, encodeChatMessageIntent, grpcFrame) are now imported from @windsurf/sdk
 
 /**
  * Encode a ChatMessage for the RawGetChatMessageRequest
@@ -479,14 +406,8 @@ function buildGetTrajectoryRequest(cascadeId: string): Buffer {
 /**
  * Wrap a protobuf payload in a gRPC frame
  * Format: 1 byte compression (0) + 4 bytes length + payload
+ * Note: grpcFrame is now imported from @windsurf/sdk
  */
-function grpcFrame(payload: Buffer): Buffer {
-  const frame = Buffer.alloc(5 + payload.length);
-  frame[0] = 0; // No compression
-  frame.writeUInt32BE(payload.length, 1);
-  payload.copy(frame, 5);
-  return frame;
-}
 
 // ============================================================================
 // Response Parsing (Protobuf Decoding)

@@ -175,17 +175,20 @@ opencode-windsurf-auth/
 ├── src/
 │   ├── plugin.ts              # Main HTTP server & OpenAI API endpoints
 │   ├── index.ts               # Package exports
+│   ├── server.ts              # Standalone server entry point
 │   └── plugin/
-│       ├── auth.ts            # Credential discovery (CSRF, port, API key)
-│       ├── grpc-client.ts     # gRPC encoding/decoding + Cascade flow
-│       ├── models.ts          # Model name → enum/UID mappings
-│       ├── types.ts           # TypeScript types
-│       └── discovery.ts       # Dynamic protobuf field discovery
+│       └── grpc-client.ts     # gRPC encoding/decoding + Cascade flow
 ├── dist/                      # Compiled output
 ├── tests/                     # Unit tests
 ├── install.sh                 # One-line installer
 └── README.md                  # This file
 ```
+
+**Architecture**: This plugin depends on [`@windsurf/sdk`](https://github.com/gabslocked/windsurf-sdk) for core functionality including:
+- Credential discovery (auth module)
+- Model resolution (models module)
+- Protobuf encoding (grpc module)
+- Dynamic field discovery (discovery module)
 
 ## 🛠️ Development
 
