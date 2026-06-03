@@ -128,11 +128,16 @@ wait_for_language_server() {
 
 # Start a dummy TCP listener on EXT_PORT that the language server connects back to.
 # The language_server binary requires --extension_server_port to be reachable.
+# We must send a proper HTTP 200 OK response for Connect-Protocol requests.
 start_dummy_extension_server() {
   local port="$1"
   log "INFO" "Starting dummy extension server on port $port..."
   while true; do
-    nc -l -p "$port" 2>/dev/null || nc -l "$port" 2>/dev/null || break
+    # Send a minimal HTTP 200 OK for Connect-Protocol unary responses
+    printf 'HTTP/1.1 200 OK\r\nContent-Type: application/proto\r\nContent-Length: 0\r\n\r\n' | \
+      nc -l -p "$port" 2>/dev/null || \
+      printf 'HTTP/1.1 200 OK\r\nContent-Type: application/proto\r\nContent-Length: 0\r\n\r\n' | \
+      nc -l "$port" 2>/dev/null || break
   done &
   EXT_SERVER_PID=$!
   sleep 0.3
