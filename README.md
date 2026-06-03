@@ -105,18 +105,16 @@ The container supports **two modes**:
 
 ### Build
 
-The Dockerfile is in this repo but the build context must be the **parent directory** (it includes the `windsurf-sdk` sibling project):
+The Dockerfile is in this repo but the build context must be the **parent directory** (it includes the `windsurf-sdk` dependency):
 
 ```bash
-# Clone the main project (windsurf-sdk is a local sibling dependency)
+# Clone both repos side-by-side
 git clone https://github.com/gabslocked/opencode-windsurf-auth.git
+git clone https://github.com/gauravahujame/windsurf-sdk.git
+
 cd opencode-windsurf-auth
 
-# The Dockerfile expects windsurf-sdk in the parent directory.
-# If you don't have it, the build will fail. Ensure you have:
-#   ../windsurf-sdk/     (local package dependency)
-#
-# Build from the parent directory:
+# Build from the parent directory (context includes ../windsurf-sdk)
 docker build --platform linux/amd64 -f Dockerfile -t windsurf-proxy ../
 ```
 
@@ -245,12 +243,12 @@ Deploy on a headless Debian/Ubuntu server and access the proxy from any machine 
 # SSH into your homelab
 ssh user@homelab
 
-# Clone the project. The build context must include the local windsurf-sdk
-# sibling directory. If you don't have it, download/copy it to the parent.
+# Clone both repos
 cd /opt
 git clone https://github.com/gabslocked/opencode-windsurf-auth.git
+git clone https://github.com/gauravahujame/windsurf-sdk.git
 
-# Build (context is parent dir to include ../windsurf-sdk)
+# Build from the parent directory (context includes ../windsurf-sdk)
 cd opencode-windsurf-auth
 docker build --platform linux/amd64 -f Dockerfile -t windsurf-proxy ../
 ```
@@ -529,7 +527,7 @@ opencode-windsurf-auth/
 └── README.md                  # This file
 ```
 
-**Architecture**: This plugin depends on `@windsurf/sdk` (local sibling package in `../windsurf-sdk/`) for core functionality including:
+**Architecture**: This plugin depends on [`@windsurf/sdk`](https://github.com/gauravahujame/windsurf-sdk) for core functionality including:
 - Credential discovery (auth module)
 - Model resolution (models module)
 - Protobuf encoding (grpc module)
