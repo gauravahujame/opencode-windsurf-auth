@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  windsurf:
+    build:
+      context: ../
+      dockerfile: opencode-windsurf-auth/Dockerfile
+    container_name: windsurf-all-in-one
+    restart: unless-stopped
+    ports:
+      - "${PORT:-42100}:42100"
+      - "${VNC_PORT:-5901}:5901"
+    # Windsurf IDE is now built into the Docker image — no volume mount needed
+    environment:
+      # HTTP server binding
+      - HOST=0.0.0.0
+      - PORT=42100
+
+      # Optional: protect the HTTP API with a bearer token
+      # Clients must send: Authorization: Bearer <token>
+      - API_KEY=${API_KEY:-}
+
+      # Windsurf credentials (omit for GUI mode, required for auto mode)
+      - WINDSURF_CSRF_TOKEN=${WINDSURF_CSRF_TOKEN:-}
+      - WINDSURF_API_KEY=${WINDSURF_API_KEY:-}
+      - WINDSURF_VERSION=${WINDSURF_VERSION:-1.9600.41}
+
+      # Internal ports (language server runs inside the container)
+      - WINDSURF_PORT=42101
+      - EXTENSION_SERVER_PORT=42102
+    healthcheck:
+      test: ["CMD", "bun", "run", "-e", "fetch(`http://localhost:42100/health`).then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

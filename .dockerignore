@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.gitignore
+.DS_Store
+*.log
+*.db
+mitm_mcp_traffic.db
+.vscode
+.context
+tests/live/
+docs/
+*.test.ts
+*.test.js
+*.test.d.ts

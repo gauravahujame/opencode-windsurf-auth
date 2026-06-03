@@ -25,7 +25,8 @@
     "test:analyze": "bun run tests/live/analyze.ts",
     "clean": "rm -rf dist",
     "extract-models": "bun run scripts/extract-models.ts",
-    "start": "bun run dist/src/server.js"
+    "start": "bun run dist/src/server.js",
+    "start:standalone": "bun run dist/src/standalone-server.js"
   },
   "keywords": [
     "opencode",
@@ -42,7 +43,7 @@
     "@bufbuild/protobuf": "^2.0.0",
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-web": "^2.0.0",
-    "@windsurf/sdk": "file:../windsurf-sdk",
+    "@windsurf/sdk": "file:/app/windsurf-sdk",
     "proper-lockfile": "^4.1.2",
     "xdg-basedir": "^5.1.0",
     "zod": "^4.3.5"

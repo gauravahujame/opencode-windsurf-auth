@@ -33,8 +33,6 @@ if (!port || !path || !bodyFile) {
 const csrfHeaderValue = csrfToken && csrfToken !== 'none' ? csrfToken : '';
 
 const body = fs.existsSync(bodyFile) ? fs.readFileSync(bodyFile) : Buffer.alloc(0);
-// Clean up temp file immediately after reading
-try { fs.unlinkSync(bodyFile); } catch { /* ignore */ }
 
 const client = http2.connect(`http://localhost:${port}`);
 const chunks = [];

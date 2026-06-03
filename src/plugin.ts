@@ -24,7 +24,7 @@ import { PLUGIN_ID } from '@windsurf/sdk';
 // Types
 // ============================================================================
 
-interface ChatCompletionRequest {
+export interface ChatCompletionRequest {
   model?: string;
   messages: Array<{
     role: string;
@@ -114,7 +114,7 @@ function buildToolCallPayload(model: string, toolCalls: Array<{ name: string; ar
   };
 }
 
-async function handleToolPlanning(
+export async function handleToolPlanning(
   credentials: WindsurfCredentials,
   request: ChatCompletionRequest
 ): Promise<Response> {
@@ -149,7 +149,7 @@ async function handleToolPlanning(
   });
 }
 
-function handleToolPlanningStream(
+export function handleToolPlanningStream(
   credentials: WindsurfCredentials,
   request: ChatCompletionRequest
 ): ReadableStream<Uint8Array> {
@@ -462,7 +462,7 @@ function createOpenAICompatibleResponse(
 /**
  * Create a streaming response using the gRPC generator
  */
-function createStreamingResponse(
+export function createStreamingResponse(
   credentials: WindsurfCredentials,
   request: ChatCompletionRequest
 ): ReadableStream<Uint8Array> {
@@ -538,7 +538,7 @@ function createStreamingResponse(
 /**
  * Create a non-streaming response by collecting all chunks
  */
-async function createNonStreamingResponse(
+export async function createNonStreamingResponse(
   credentials: WindsurfCredentials,
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResponse> {
@@ -592,7 +592,7 @@ function getGlobalKey(): string {
   return '__opencode_windsurf_proxy_server__';
 }
 
-function openAIError(status: number, message: string, details?: string): Response {
+export function openAIError(status: number, message: string, details?: string): Response {
   return new Response(
     JSON.stringify({
       error: {
@@ -637,7 +637,7 @@ async function ensureWindsurfProxyServer(): Promise<string> {
         return new Response(
           JSON.stringify({
             object: 'list',
-            data: models.map((id) => {
+            data: models.map((id: string) => {
               const variants = getModelVariants(id);
               return {
                 id,
@@ -646,9 +646,9 @@ async function ensureWindsurfProxyServer(): Promise<string> {
                 owned_by: 'windsurf',
                 ...(variants
                   ? {
-                      variants: Object.entries(variants).map(([name, meta]) => ({
+                      variants: Object.entries(variants).map(([name, meta]: [string, any]) => ({
                         id: name,
-                        description: meta.description,
+                        description: meta?.description ?? '',
                       })),
                     }
                   : {}),
